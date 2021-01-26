@@ -1,0 +1,6 @@
+name: MOJ JSONAPI Prison Cateogires
+type: module
+description: TODO write this
+package: Core
+core: 8.x
+core_version_requirement: ^8 || ^9

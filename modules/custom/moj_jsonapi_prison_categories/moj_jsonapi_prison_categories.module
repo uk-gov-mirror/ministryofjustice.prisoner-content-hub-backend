@@ -1,0 +1,55 @@
+<?php
+
+/**
+ * @file
+ * TODO: Write this
+ */
+
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\taxonomy\Entity\Term;
+
+/**
+ * Implements hook_entity_access().
+ *
+ * WIP: Implement endpoint for tags with filtered out by the current prison and
+ * current prison categories.
+ */
+function moj_jsonapi_prison_categories_entity_access(\Drupal\Core\Entity\EntityInterface $entity, $operation, \Drupal\Core\Session\AccountInterface $account) {
+  if ($operation !== 'view') {
+    return \Drupal\Core\Access\AccessResult::neutral();
+  }
+  $current_prison_id = 792;
+
+  if ($entity instanceof ContentEntityInterface) {
+    if ($entity->hasField('field_related_prisons')) {
+      $related_prison_tids = $entity->get('field_related_prisons')->getValue();
+
+      // Entity has at least one prison.
+      if (!empty($related_prison_tids)) {
+        foreach ($related_prison_tids as $value) {
+          if ($value['target_id'] == $current_prison_id) {
+            return AccessResult::allowed();
+          }
+        }
+        return AccessResult::forbidden();
+      }
+      // Entity has no prisons. Check for prison categories.
+      else {
+        $prison_term = Term::load($current_prison_id);
+        $current_prison_category_values = $prison_term->get('field_prison_categories')->getValue();
+        $current_prison_category_tids = array_column($current_prison_category_values, 'target_id');
+        if ($entity->hasField('field_prison_categories')) {
+          $prison_category_values = $entity->get('field_prison_categories')->getValue();
+          $prison_category_tids = array_column($prison_category_values, 'target_id');
+          if (!empty($prison_category_tids) && empty(array_intersect($current_prison_category_tids,  $prison_category_tids))) {
+            return AccessResult::forbidden();
+          }
+          else {
+            return AccessResult::allowed();
+          }
+        }
+      }
+    }
+  }
+}
